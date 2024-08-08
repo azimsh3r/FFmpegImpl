@@ -4,14 +4,12 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.concurrent.atomic.AtomicLong;
 
-public class MediaProcessorImpl {
+public class MediaProcessor {
     private static final Path path = Paths.get("C:\\ProgramData\\chocolatey\\bin");
     private static final String MATERIALS = "C:\\Users\\Azim\\Desktop\\Projects\\Materials\\";
 
-    public static void main (String [] args) {
-        //System.out.println(identifyMediaDuration(MATERIALS+"video.mp4"));
-        //changeResolution(MATERIALS+"video.mp4", MATERIALS+"video.mp4"+"output.mp4");
-        changeFormat(MATERIALS+"video.mp4", MATERIALS+"output.avi");
+    public static void main (String [] args) throws Exception {
+        httpLiveStream(MATERIALS+"video.mp4");
     }
 
     public static AtomicLong identifyMediaDuration (String input) {
@@ -55,5 +53,27 @@ public class MediaProcessorImpl {
                                 .toUrl(output)
                 )
                 .execute();
+    }
+
+    public static void httpLiveStream (String input) throws Exception {
+        for (int i = 0; i < 3; i++) {
+            KeyGenerator.generateKeyFile(MATERIALS, i);
+            KeyGenerator.createKeyInfoFile("http://your-server-ip/keys", MATERIALS, "0x" + Integer.toHexString(i), i);
+
+            FFmpeg.atPath(path)
+                    .addInput(
+                            UrlInput.fromUrl(input)
+                    )
+                    .addOutput(
+                            UrlOutput.toPath(Paths.get(MATERIALS).resolve("index_" + i + ".m3u8"))
+                                    .setFormat("hls")
+                                    .addOption("-hls_list_size", "3")
+                                    .addOption("-hls_time", "2")
+                                    .addOption("-hls_segment_filename", MATERIALS + "segment_%03d.ts")
+                                    .addOption("-hls_key_info_file", MATERIALS + "key_info_" + i + ".txt")
+                    )
+                    .setOverwriteOutput(true)
+                    .execute();
+        }
     }
 }
